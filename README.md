@@ -63,6 +63,10 @@ ReCarted boots a temporary copy of the original track image in the background. T
 
 More **cassette** recipes are a priority, especially multi-stage tapes such as Preppie! and the two sides of International Karate. Additional ATX releases, more floppy layouts, and tested **macOS and Windows** installations are also on the roadmap. WAV recordings, raw ROMs, and arbitrary disk/tape ports are not supported.
 
+## Contribute a recipe
+
+Got another Atari disk or tape running from a cartridge? [Send a pull request](https://github.com/feoh/recarted/compare) with your recipe. ATX, ATR, and CAS recipes are all welcome, including ones for a different release of a game we already support. Tell us which release you converted and what you saw when you booted it in Atari800 or on hardware. Share the recipe and the image’s SHA-256, not the commercial image or OS ROM. See [how to add and verify a recipe](docs/TECHNICAL.md#verification-and-adding-recipes) for the testing details.
+
 [Request a recipe or report a hardware result](https://github.com/feoh/recarted/issues): include the title and release, `recarted inspect` output, the source's `sha256sum`, your Atari/cart model and firmware, and what you saw. Please **don't attach commercial images or OS ROMs**.
 
 For how recognition works, emulator evidence, limitations, or building and testing the loaders, see [Technical notes](docs/TECHNICAL.md). [MIT license](LICENSE).
