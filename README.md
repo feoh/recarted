@@ -1,5 +1,9 @@
 # ReCarted!
 
+<picture>
+  <img src="assets/github-social.jpg" alt="Vintage Atari cartridge illustration labelled ReCarted" width="1280" height="640">
+</picture>
+
 Give an Atari cassette or floppy a second life in the cartridge slot. ReCarted is a **Linux command-line converter for the Atari 8-bit XL/XE and A8PicoCart**. Give it a supported `.cas` cassette, `.atr` floppy, or `.atx` track image and it writes a new cartridge file. It never overwrites your original.
 
 ## Try it in a minute (no game images needed)
