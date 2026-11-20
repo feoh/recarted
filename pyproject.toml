@@ -1,6 +1,6 @@
 [project]
 name = "recarted"
-version = "0.2.0"
+version = "0.3.0.dev0"
 description = "Turn recognized Atari 8-bit cassette and floppy images into A8PicoCart cartridges"
 readme = "README.md"
 license = "MIT"

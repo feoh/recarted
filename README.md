@@ -2,7 +2,7 @@
 
 ![Vintage Atari cartridge illustration labelled ReCarted](assets/github-social.jpg)
 
-Give an Atari cassette or floppy a second life in the cartridge slot. ReCarted is a **Linux command-line converter for the Atari 8-bit XL/XE and A8PicoCart**. Give it a supported `.cas` cassette, `.atr` floppy, or `.atx` track image and it writes a new cartridge file. It never overwrites your original.
+Give an Atari cassette or floppy a second life in the cartridge slot. ReCarted is a **Linux command-line converter for the Atari 8-bit XL/XE and A8PicoCart**. Give it a supported `.cas` cassette, `.atr` floppy, `.atx` track image, or standard cartridge `.rom` dump and it writes a new cartridge file. It never overwrites your original.
 
 ## Try it in a minute (no game images needed)
 
@@ -29,7 +29,7 @@ recarted convert 'Gridrunner.cas'
 recarted convert 'Bruce Lee.atr' --output 'Bruce Lee.xex'
 ```
 
-`inspect` reads the contents, not the filename. `convert` writes a `.car` beside the source unless you choose `--output`. If the output already exists, choose a new name. For one-load games you can request `.xex` instead: the A8PicoCart loads that directly into RAM. For games that still need disk sectors, use `.car`.
+`inspect` checks file signatures first. For a headerless cartridge dump, use the `.rom` extension. `convert` writes a `.car` beside the source unless you choose `--output`. If the output already exists, choose a new name. For one-load games you can request `.xex` instead: the A8PicoCart loads that directly into RAM. For games that still need disk sectors, use `.car`.
 
 | Source | Recognized games in 0.2 | Output |
 | --- | --- | --- |
@@ -40,6 +40,19 @@ recarted convert 'Bruce Lee.atr' --output 'Bruce Lee.xex'
 | Track disk (`.atx`) | The Tail of Beta Lyrae (Datamost), Bruce Lee | CAR; Atari800 + stock XL/XE OS revision 2 required |
 
 These are **specific releases**, not every dump of each title. If `inspect` says “No matching recipe,” changing the name won't help. No commercial games, game data, or Atari OS ROMs are distributed with ReCarted. Use images you have the right to convert.
+
+## Wrap a cartridge ROM
+
+A raw `.rom` already contains the cartridge program. ReCarted can add a CAR header without changing a single ROM byte:
+
+```sh
+recarted inspect Kangaroo.rom
+recarted convert Kangaroo.rom
+```
+
+Recognized dumps of Kangaroo, Dig Dug, Journey to the Planets, Pitfall! II, Popeye and Qix need no options. For an unknown dump **you know is a standard Atari 8-bit computer cartridge**, specify `--rom-type 1` for 8 KiB or `--rom-type 2` for 16 KiB. Size alone cannot identify the layout. Bank-switched ROMs, system ROMs and Atari 5200 ROMs aren't supported by this wrapper.
+
+A CAR header doesn't fix OS compatibility. The recognized Kangaroo dump reached the playfield in Atari800's Atari 800 mode with OS-B, but showed a blank screen with the stock 800XL OS. This matters on a real XL/XE even if the cartridge accepts the file.
 
 ## Convert an ATX disk
 
@@ -59,11 +72,11 @@ ReCarted boots a temporary copy of the original track image in the background. T
 
 **Can I save a pinball table?** Not to the embedded cartridge disk. Use your original ATR in a writable disk setup for authoring and saving.
 
-**“Unsupported Cartridge Type”?** Run `recarted inspect` on the file you actually copied. ReCarted generates **type 41, 128 KiB** (Atarimax **1 Mbit**). The older type 42 is **1 MiB / 8 Mbit** and is not supported by stock A8PicoCart. Renaming a ROM or editing that header byte doesn't fix it. If type 41 is rejected, tell us your cartridge model and firmware version.
+**“Unsupported Cartridge Type”?** Run `recarted inspect` on the file you actually copied. ReCarted wraps standard ROM dumps as **type 1 (8 KiB)** or **type 2 (16 KiB)**. Disk and tape recipes generate **type 41, 128 KiB** (Atarimax **1 Mbit**). The older type 42 is **1 MiB / 8 Mbit** and is not supported by stock A8PicoCart. Renaming a ROM or editing that header byte doesn't fix it. If type 41 is rejected, tell us your cartridge model and firmware version.
 
 ## What's next?
 
-More **cassette** recipes are a priority, especially multi-stage tapes such as Preppie! and the two sides of International Karate. Additional ATX releases, more floppy layouts, and tested **macOS and Windows** installations are also on the roadmap. WAV recordings, raw ROMs, and arbitrary disk/tape ports are not supported.
+More **cassette** recipes are a priority, especially multi-stage tapes such as Preppie! and the two sides of International Karate. Additional ATX releases, more floppy layouts, and tested **macOS and Windows** installations are also on the roadmap. WAV recordings, arbitrary bank-switched ROM dumps, and arbitrary disk/tape ports are not supported.
 
 ## Contribute a recipe
 

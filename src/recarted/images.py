@@ -171,6 +171,48 @@ def cassette(data: bytes) -> Image:
     )
 
 
+# Standard left-slot Atari computer cartridges. Size constrains the mapper;
+# it does not distinguish these from OS ROMs or bank-switched cartridges.
+STANDARD_ROM_SIZES = {1: 8192, 2: 16384}
+KNOWN_ROMS = {
+    "416d708a89529faecd497efff3a9db7c4c5f5266457c96fa0f365eddc3c54ee7": ("Kangaroo", 2),
+    "2c4c7403941ea68c03d698221cc880bc24d366de8f2a92b7c02a0d2f320f7d5f": ("Dig Dug", 2),
+    "7935c56f84757d8347f8724be7b0aa2e85bc6c3a0f33764a440db910b561c2e1": (
+        "Journey to the Planets",
+        2,
+    ),
+    "a3548a583b8890421f1203e6fec0632a3b95c39f014ae1b417442cc7ca8e1ff5": (
+        "Pitfall! II - Lost Caverns",
+        2,
+    ),
+    "7e37af6174a4b7d1b37c5f099efd1a9f502216b47482e74b0f3782721caf0812": ("Popeye", 2),
+    "e4d4c08d47a48f61d089d6465608208893495417e72e13eaf91402bafc9596e8": ("Qix", 1),
+}
+
+
+def raw_rom(data: bytes) -> Image:
+    detail = f"{len(data):,} bytes; raw .rom files have no cartridge-type header."
+    known = KNOWN_ROMS.get(sha256(data).hexdigest())
+    if known:
+        title, mapper = known
+        detail += f" Matched {title}: standard CAR type {mapper}."
+        if title == "Kangaroo":
+            detail += " This dump booted with Atari 800 OS-B but showed a blank screen with the stock 800XL OS."
+        return Image("ROM", detail, data, mapper=mapper)
+    for candidate, size in STANDARD_ROM_SIZES.items():
+        if size == len(data):
+            return Image(
+                "ROM",
+                f"{detail} Unknown mapping. If this is a standard {size // 1024} KiB Atari 8-bit computer cartridge, use convert with --rom-type {candidate}. Size alone cannot confirm that.",
+                data,
+            )
+    return Image(
+        "ROM",
+        f"{detail} Only standard 8 KiB and 16 KiB cartridge dumps can be wrapped. For other layouts, use a CAR with the correct mapper.",
+        data,
+    )
+
+
 # The two Atarimax formats are often confused: 1 Mbit != 1 MiB.
 def cartridge(data: bytes) -> Image:
     if len(data) <= 16:
@@ -179,12 +221,14 @@ def cartridge(data: bytes) -> Image:
     payload = data[16:]
     if checksum != sum(payload) & 0xFFFFFFFF:
         raise ValueError("Bad CAR checksum.")
-    expected = {41: 131072, 42: 1048576}.get(mapper)
+    expected = {**STANDARD_ROM_SIZES, 41: 131072, 42: 1048576}.get(mapper)
     if expected is not None and expected != len(payload):
         raise ValueError(
             f"Type {mapper} needs {expected} payload bytes, not {len(payload)}."
         )
     support = {
+        1: "Standard 8 KiB cartridge; supported by stock A8PicoCart.",
+        2: "Standard 16 KiB cartridge; supported by stock A8PicoCart.",
         41: "Mapper supported by stock A8PicoCart.",
         42: "Unsupported by stock A8PicoCart. Changing the header is not a conversion.",
     }.get(mapper, "Compatibility not assessed by ReCarted.")
@@ -195,7 +239,7 @@ def cartridge(data: bytes) -> Image:
     )
 
 
-def identify(data: bytes) -> Image:
+def identify(data: bytes, *, suffix: str = "") -> Image:
     if data.startswith(b"FUJI"):
         return cassette(data)
     if data.startswith(b"\x96\x02"):
@@ -214,6 +258,8 @@ def identify(data: bytes) -> Image:
                 raise ValueError("ATX sectors do not match the expected program.")
             return Image("ATX", image.detail, payload, image.recipe)
         return image
+    if suffix.lower() == ".rom":
+        return raw_rom(data)
     raise ValueError(
-        "Unrecognized file signature. Expected CAS, ATR, ATX or CAR (not a ZIP or WAV)."
+        "Unrecognized file signature. Expected CAS, ATR, ATX or CAR, or a headerless cartridge dump with a .rom extension."
     )

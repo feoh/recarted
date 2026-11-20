@@ -5,7 +5,7 @@ from pathlib import Path
 from struct import pack
 
 from .capture import LOAD, capture_program
-from .images import Image
+from .images import STANDARD_ROM_SIZES, Image
 
 
 def save_new(path: Path, contents: bytes) -> None:
@@ -27,9 +27,40 @@ def segment(addr: int, data: bytes) -> bytes:
     return pack("<HH", addr, addr + len(data) - 1) + data
 
 
+def _car(mapper: int, payload: bytes | bytearray) -> bytes:
+    return pack(">4sIII", b"CART", mapper, sum(payload) & 0xFFFFFFFF, 0) + payload
+
+
 def convert_image(
-    image: Image, kind: str = "car", *, os_rom: Path | None = None
+    image: Image,
+    kind: str = "car",
+    *,
+    os_rom: Path | None = None,
+    rom_type: int | None = None,
 ) -> bytes:
+    if image.medium == "ROM":
+        if kind != "car":
+            raise ValueError(
+                "A cartridge ROM can be wrapped as .car, not converted to .xex."
+            )
+        mapper = image.mapper if rom_type is None else rom_type
+        if mapper is None:
+            raise ValueError(image.detail)
+        if mapper not in STANDARD_ROM_SIZES:
+            raise ValueError(
+                "--rom-type supports only 1 (standard 8 KiB) and 2 (standard 16 KiB)."
+            )
+        if len(image.payload) != STANDARD_ROM_SIZES[mapper]:
+            raise ValueError(
+                f"Type {mapper} requires {STANDARD_ROM_SIZES[mapper]:,} bytes; file has {len(image.payload):,}."
+            )
+        return _car(mapper, image.payload)
+    if rom_type is not None:
+        raise ValueError(
+            "--rom-type is only for headerless .rom input, not a file with a recognized header."
+        )
+    if image.medium == "CAR":
+        raise ValueError("Already a CART-format cartridge; no conversion needed.")
     recipe = image.recipe
     if recipe is None:
         raise ValueError(
@@ -82,4 +113,4 @@ def convert_image(
     rom[0x1F00 : 0x1F00 + len(params)] = params
     rom[0x1FF9:8192] = bytes.fromhex("60 00 a0 00 04 f9 bf")
     rom[8192 : 8192 + len(payload)] = payload
-    return pack(">4sIII", b"CART", 41, sum(rom), 0) + rom
+    return _car(41, rom)

@@ -10,7 +10,7 @@ from cyclopts import App
 
 from .convert import convert_image, save_new
 from .example import example_image
-from .images import RECIPES, identify, read_input
+from .images import KNOWN_ROMS, RECIPES, identify, read_input
 
 app = App(
     name="recarted",
@@ -22,7 +22,7 @@ app = App(
 @app.command
 def inspect(source: Path) -> None:
     """Identify an image by content and check for a conversion recipe."""
-    image = identify(read_input(source))
+    image = identify(read_input(source), suffix=source.suffix)
     print(f"{source.name}: {image.medium}. {image.detail}")
     if image.recipe:
         print(f"Matched: {image.recipe.name}. Output: A8PicoCart type 41 (128 KiB).")
@@ -34,23 +34,37 @@ def inspect(source: Path) -> None:
 
 @app.command
 def recipes() -> None:
-    """List known cassette and disk recipes and their output formats."""
+    """List recognized tape, disk and raw cartridge releases and output formats."""
     for recipe in RECIPES:
         formats = {
             "disk": "CAR (read-only virtual disk)",
             "capture": "CAR (Atari800 + XL/XE OS rev. 2 required)",
         }.get(recipe.loader, "CAR or XEX")
         print(f"{recipe.medium}  {recipe.name}: {formats}")
+    for title, mapper in sorted(KNOWN_ROMS.values()):
+        print(f"ROM  {title}: standard CAR type {mapper}")
 
 
 @app.command
 def convert(
-    source: Path, *, output: Path | None = None, os_rom: Path | None = None
+    source: Path,
+    *,
+    output: Path | None = None,
+    os_rom: Path | None = None,
+    rom_type: int | None = None,
 ) -> None:
-    """Convert to a new cartridge. Some ATX recipes need a stock XL/XE OS via --os-rom."""
-    image = identify(read_input(source))
+    """Convert to a new cartridge. Some ATX recipes need a stock XL/XE OS via --os-rom.
+
+    Parameters
+    ----------
+    rom_type : int, optional
+        Confirm the layout of a headerless cartridge: 1 (standard 8 KiB) or 2 (standard 16 KiB).
+    """
+    image = identify(read_input(source), suffix=source.suffix)
     out = output if output is not None else source.with_suffix(".car")
-    artifact = convert_image(image, out.suffix.lower().lstrip("."), os_rom=os_rom)
+    artifact = convert_image(
+        image, out.suffix.lower().lstrip("."), os_rom=os_rom, rom_type=rom_type
+    )
     save_new(out, artifact)
     print(f"Created {out} ({len(artifact):,} bytes).")
     if image.recipe and image.recipe.loader == "disk":
@@ -68,10 +82,12 @@ def example(output: Path) -> None:
 
 @app.command
 def test(car: Path, *, os_rom: Path | None = None) -> None:
-    """Open a type-41 CAR interactively in Atari800; judge the result on screen."""
+    """Open a type-1, type-2 or type-41 CAR interactively in Atari800; judge the result on screen."""
     image = identify(read_input(car))
-    if image.mapper != 41:
-        raise ValueError("test expects a type-41 .car. Convert your input first.")
+    if image.medium != "CAR" or image.mapper not in (1, 2, 41):
+        raise ValueError(
+            "test expects a type-1, type-2 or type-41 .car. Convert your input first."
+        )
     emulator = shutil.which("atari800")
     if not emulator:
         raise ValueError(
