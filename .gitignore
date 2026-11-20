@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+*.[Aa][Tt][Rr]
+*.[Aa][Tt][Xx]
+*.[Cc][Aa][Ss]
+*.[Cc][Aa][Rr]
+*.[Rr][Oo][Mm]
+*.[Xx][Ee][Xx]

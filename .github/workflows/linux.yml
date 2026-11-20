@@ -1,0 +1,20 @@
+name: Linux
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked --python 3.11
+      - run: uv run prek run --all-files
+      - run: uv run mypy src
+      - run: uv run pytest
+      - name: Rebuild and compare cartridge boot code
+        run: |
+          sudo apt-get update && sudo apt-get install -y cc65
+          make -B loaders
+          git diff --exit-code -- src/recarted/loaders
+      - run: uv build

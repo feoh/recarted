@@ -1,0 +1,39 @@
+[project]
+name = "recarted"
+version = "0.1.0"
+description = "Turn recognized Atari 8-bit cassette and floppy images into A8PicoCart cartridges"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "Christopher Patti"}]
+requires-python = ">=3.11"
+dependencies = ["cyclopts>=4,<5"]
+classifiers = ["Environment :: Console", "Operating System :: POSIX :: Linux", "Topic :: System :: Emulators"]
+
+[project.urls]
+Repository = "https://github.com/feoh/recarted"
+
+[project.scripts]
+recarted = "recarted.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.9,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+source-include = ["asm/**", "Makefile", "docs/**", "tests/**"]
+
+[dependency-groups]
+dev = [
+    "mypy",
+    "prek",
+    "py65>=1.2.0",
+    "pytest",
+    "ruff",
+]
+
+[tool.mypy]
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
