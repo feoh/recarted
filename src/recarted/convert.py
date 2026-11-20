@@ -4,6 +4,7 @@ from importlib.resources import files
 from pathlib import Path
 from struct import pack
 
+from .capture import LOAD, capture_program
 from .images import Image
 
 
@@ -26,7 +27,9 @@ def segment(addr: int, data: bytes) -> bytes:
     return pack("<HH", addr, addr + len(data) - 1) + data
 
 
-def convert_image(image: Image, kind: str = "car") -> bytes:
+def convert_image(
+    image: Image, kind: str = "car", *, os_rom: Path | None = None
+) -> bytes:
     recipe = image.recipe
     if recipe is None:
         raise ValueError(
@@ -44,7 +47,12 @@ def convert_image(image: Image, kind: str = "car") -> bytes:
         loader = "disk"
         params = payload[2:4] + payload[1:2]
     else:
-        if recipe.loader == "bruce":
+        if recipe.loader == "capture":
+            if kind != "car":
+                raise ValueError("This ATX recipe produces a .car, not an .xex.")
+            payload, run = capture_program(payload, os_rom)
+            load, casini = LOAD, 0
+        elif recipe.loader == "bruce":
             # The first sector is the disk reader; the next $7400 bytes are
             # relocated to $0400 by the original final-stage loader.
             payload = payload[128 : 128 + 0x7400]

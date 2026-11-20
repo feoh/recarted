@@ -8,7 +8,7 @@ from recarted.example import SECTOR, example_image
 from recarted.images import MAX_INPUT, identify, read_input
 
 
-@pytest.mark.parametrize("kind", ["cas", "atr"])
+@pytest.mark.parametrize("kind", ["cas", "atr", "atx"])
 def test_end_to_end(kind):
     image = identify(example_image(kind))
     assert image.recipe.name == "ReCarted! colour bars"
@@ -67,7 +67,8 @@ def test_tape_validation_and_multiple_stages():
 
 
 def test_other_formats():
-    assert identify(b"AT8X" + bytes(44)).medium == "ATX"
+    with pytest.raises(ValueError, match="ATX version"):
+        identify(b"AT8X" + bytes(44))
     rom = bytes(1048576)
     assert "Unsupported" in identify(pack(">4sIII", b"CART", 42, 0, 0) + rom).detail
     with pytest.raises(ValueError, match="needs"):

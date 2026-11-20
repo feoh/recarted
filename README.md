@@ -1,6 +1,6 @@
 # ReCarted!
 
-Give an Atari cassette or floppy a second life in the cartridge slot. ReCarted is a **Linux command-line converter for the Atari 8-bit XL/XE and A8PicoCart**. Cassette conversion ships in this first version: give it a supported `.cas` **or** `.atr`, and it writes a new cartridge file. It never overwrites your original.
+Give an Atari cassette or floppy a second life in the cartridge slot. ReCarted is a **Linux command-line converter for the Atari 8-bit XL/XE and A8PicoCart**. Give it a supported `.cas` cassette, `.atr` floppy, or `.atx` track image and it writes a new cartridge file. It never overwrites your original.
 
 ## Try it in a minute (no game images needed)
 
@@ -14,9 +14,9 @@ recarted convert rainbow.cas
 recarted inspect rainbow.car
 ```
 
-If the shell can't find `recarted`, run `uv tool update-shell` and open a new terminal. Python 3.11 or newer is required; uv can supply it. No assembler, emulator, or Atari OS ROM is needed for conversion.
+If the shell can't find `recarted`, run `uv tool update-shell` and open a new terminal. Python 3.11 or newer is required; uv can supply it. No assembler is needed. Only the two emulator-assisted ATX recipes require Atari800 and an Atari OS ROM.
 
-The example is an original Atari program that displays colour bars. Try `recarted example rainbow-disk.atr` for the floppy equivalent. Use distinct names: both `rainbow.cas` and `rainbow.atr` would otherwise want to write `rainbow.car`.
+The example is an original Atari program that displays colour bars. Try `recarted example rainbow-disk.atr` for the floppy equivalent, or `recarted example rainbow-track.atx` to try the ATX workflow without an emulator or ROM. Use distinct names: both `rainbow.cas` and `rainbow.atr` would otherwise want to write `rainbow.car`.
 
 ## Convert your own image
 
@@ -29,13 +29,26 @@ recarted convert 'Bruce Lee.atr' --output 'Bruce Lee.xex'
 
 `inspect` reads the contents, not the filename. `convert` writes a `.car` beside the source unless you choose `--output`. If the output already exists, choose a new name. For one-load games you can request `.xex` instead: the A8PicoCart loads that directly into RAM. For games that still need disk sectors, use `.car`.
 
-| Source | Recognized games in 0.1 | Output |
+| Source | Recognized games in 0.2 | Output |
 | --- | --- | --- |
 | Cassette (`.cas`) | Attack of the Mutant Camels, Gridrunner, Hover Bovver | CAR or XEX |
 | Disk (`.atr`) | Bruce Lee (Datasoft, US a2) | CAR or XEX |
 | Disk (`.atr`) | Jumpman (Epyx, US), Pinball Construction Set | CAR with a **read-only** virtual disk |
+| Track disk (`.atx`) | Jumpman (Epyx, US) | CAR with a **read-only** virtual disk |
+| Track disk (`.atx`) | The Tail of Beta Lyrae (Datamost), Bruce Lee | CAR; Atari800 + stock XL/XE OS revision 2 required |
 
 These are **specific releases**, not every dump of each title. If `inspect` says “No matching recipe,” changing the name won't help. No commercial games, game data, or Atari OS ROMs are distributed with ReCarted. Use images you have the right to convert.
+
+## Convert an ATX disk
+
+Run `recarted inspect` first. If the disk is the recognized Jumpman release, `recarted convert 'Jumpman (1983)(Epyx)(US)[!].atx'` works directly. For *The Tail of Beta Lyrae* and *Bruce Lee*, install Atari800 with its text monitor (tested with 5.2.0) and supply your own stock 16 KiB XL/XE OS revision 2 ROM. For example, from the directory containing the game and `ATARIXL.ROM`:
+
+```sh
+recarted inspect 'Tail of Beta Lyrae (The) _ Datamost.atx'
+recarted convert 'Tail of Beta Lyrae (The) _ Datamost.atx' --os-rom ATARIXL.ROM
+```
+
+ReCarted boots a temporary copy of the original track image in the background. The resulting `.car` needs neither the disk nor that ROM file on the cartridge. An unknown dump isn't flattened into an ATR; it may need the disk's duplicate sectors, timing or error status. If you're upgrading the Git-based install, run `uv tool upgrade recarted`.
 
 ## Play it
 
@@ -48,7 +61,7 @@ These are **specific releases**, not every dump of each title. If `inspect` says
 
 ## What's next?
 
-More **cassette** recipes are a priority, especially multi-stage tapes such as Preppie! and the two sides of International Karate. Track-preserving `.atx` conversions, more floppy layouts, and tested **macOS and Windows** installations are also on the roadmap. Today `.atx` is identified only; WAV recordings, raw ROMs, and arbitrary disk/tape ports are not supported.
+More **cassette** recipes are a priority, especially multi-stage tapes such as Preppie! and the two sides of International Karate. Additional ATX releases, more floppy layouts, and tested **macOS and Windows** installations are also on the roadmap. WAV recordings, raw ROMs, and arbitrary disk/tape ports are not supported.
 
 [Request a recipe or report a hardware result](https://github.com/feoh/recarted/issues): include the title and release, `recarted inspect` output, the source's `sha256sum`, your Atari/cart model and firmware, and what you saw. Please **don't attach commercial images or OS ROMs**.
 

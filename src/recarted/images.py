@@ -5,7 +5,9 @@ from hashlib import sha256
 from pathlib import Path
 from struct import unpack_from
 
-from .example import SECTOR, tape_checksum
+from . import atx
+from .capture import CAPTURES
+from .example import SECTOR, example_image, tape_checksum
 
 MAX_INPUT = 4 * 1024 * 1024
 
@@ -19,6 +21,16 @@ class Recipe:
 
 
 RECIPES = (
+    *(Recipe(spec.title, "ATX", "capture", spec.disk_sha256) for spec in CAPTURES),
+    Recipe(
+        "Jumpman",
+        "ATX",
+        "disk",
+        "496d3b2561c2b1154f3dea6bbca1f58715f95a10d598fe7a8755a2950eb0da79",
+    ),
+    Recipe(
+        "ReCarted! colour bars", "ATX", "tape", sha256(example_image("atx")).hexdigest()
+    ),
     Recipe(
         "Attack of the Mutant Camels",
         "CAS",
@@ -191,10 +203,17 @@ def identify(data: bytes) -> Image:
     if data.startswith(b"CART"):
         return cartridge(data)
     if data.startswith(b"AT8X"):
-        return Image(
-            "ATX",
-            "ATX signature detected; track-level disk conversion is not supported.",
-        )
+        image = match("ATX", atx.description(atx.tracks(data)), data)
+        if image.recipe and image.recipe.loader in ("disk", "tape"):
+            demo = image.recipe.loader == "tape"
+            sectors = atx.linear_sd_disk(data, 1 if demo else 40)
+            payload = sectors[:128] if demo else sectors
+            # Prove this exact track layout yields the already-tested ATR program.
+            equivalent = match("ATR", "", payload)
+            if not equivalent.recipe or equivalent.recipe.name != image.recipe.name:
+                raise ValueError("ATX sectors do not match the expected program.")
+            return Image("ATX", image.detail, payload, image.recipe)
+        return image
     raise ValueError(
         "Unrecognized file signature. Expected CAS, ATR, ATX or CAR (not a ZIP or WAV)."
     )

@@ -26,7 +26,9 @@ def inspect(source: Path) -> None:
     print(f"{source.name}: {image.medium}. {image.detail}")
     if image.recipe:
         print(f"Matched: {image.recipe.name}. Output: A8PicoCart type 41 (128 KiB).")
-    elif image.medium in ("ATR", "CAS"):
+        if image.recipe.loader == "capture":
+            print("Conversion needs Atari800 and --os-rom (stock XL/XE OS revision 2).")
+    elif image.medium in ("ATR", "CAS", "ATX"):
         print("No matching recipe; this revision cannot be converted yet.")
 
 
@@ -34,27 +36,32 @@ def inspect(source: Path) -> None:
 def recipes() -> None:
     """List known cassette and disk recipes and their output formats."""
     for recipe in RECIPES:
-        formats = (
-            "CAR (read-only virtual disk)" if recipe.loader == "disk" else "CAR or XEX"
-        )
+        formats = {
+            "disk": "CAR (read-only virtual disk)",
+            "capture": "CAR (Atari800 + XL/XE OS rev. 2 required)",
+        }.get(recipe.loader, "CAR or XEX")
         print(f"{recipe.medium}  {recipe.name}: {formats}")
 
 
 @app.command
-def convert(source: Path, *, output: Path | None = None) -> None:
-    """Convert a supported image. Defaults to a new .car next to the input."""
+def convert(
+    source: Path, *, output: Path | None = None, os_rom: Path | None = None
+) -> None:
+    """Convert to a new cartridge. Some ATX recipes need a stock XL/XE OS via --os-rom."""
     image = identify(read_input(source))
     out = output if output is not None else source.with_suffix(".car")
-    artifact = convert_image(image, out.suffix.lower().lstrip("."))
+    artifact = convert_image(image, out.suffix.lower().lstrip("."), os_rom=os_rom)
     save_new(out, artifact)
     print(f"Created {out} ({len(artifact):,} bytes).")
     if image.recipe and image.recipe.loader == "disk":
-        print("The virtual disk is read-only; use the original ATR to save changes.")
+        print(
+            "The virtual disk is read-only; use a writable disk setup to save changes."
+        )
 
 
 @app.command
 def example(output: Path) -> None:
-    """Create an original colour-bar demo tape (.cas) or disk (.atr) to try."""
+    """Create an original colour-bar demo tape (.cas) or disk (.atr or .atx) to try."""
     save_new(output, example_image(output.suffix.lower().lstrip(".")))
     print(f"Created {output}. Now run recarted convert on this file.")
 
