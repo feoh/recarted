@@ -31,7 +31,7 @@ recarted convert 'Bruce Lee.atr' --output 'Bruce Lee.xex'
 
 `inspect` checks file signatures first. For a headerless cartridge dump, use the `.rom` extension. `convert` writes a `.car` beside the source unless you choose `--output`. If the output already exists, choose a new name. For one-load games you can request `.xex` instead: the A8PicoCart loads that directly into RAM. For games that still need disk sectors, use `.car`.
 
-| Source | Recognized games in 0.2 | Output |
+| Source | Recognized disk and tape releases | Output |
 | --- | --- | --- |
 | Cassette (`.cas`) | Attack of the Mutant Camels, Gridrunner, Hover Bovver | CAR or XEX |
 | Disk (`.atr`) | Bruce Lee (Datasoft, US a2) | CAR or XEX |

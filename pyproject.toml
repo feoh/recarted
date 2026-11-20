@@ -1,7 +1,7 @@
 [project]
 name = "recarted"
-version = "0.3.0.dev0"
-description = "Turn recognized Atari 8-bit cassette and floppy images into A8PicoCart cartridges"
+version = "0.3.0"
+description = "Convert Atari 8-bit tape, disk and standard cartridge ROM images for A8PicoCart"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
