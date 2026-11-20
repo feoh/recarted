@@ -9,14 +9,14 @@ Give an Atari cassette or floppy a second life in the cartridge slot. ReCarted i
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and Git on Linux, then:
 
 ```sh
-uv tool install git+https://github.com/feoh/recarted.git
+uv tool install recarted
 recarted example rainbow.cas
 recarted inspect rainbow.cas
 recarted convert rainbow.cas
 recarted inspect rainbow.car
 ```
 
-If the shell can't find `recarted`, run `uv tool update-shell` and open a new terminal. Python 3.11 or newer is required; uv can supply it. No assembler is needed. Only the two emulator-assisted ATX recipes require Atari800 and an Atari OS ROM.
+To update later, run `uv tool upgrade recarted`. If the shell can't find `recarted`, run `uv tool update-shell` and open a new terminal. Python 3.11 or newer is required; uv can supply it. No assembler is needed. Only the two emulator-assisted ATX recipes require Atari800 and an Atari OS ROM.
 
 The example is an original Atari program that displays colour bars. Try `recarted example rainbow-disk.atr` for the floppy equivalent, or `recarted example rainbow-track.atx` to try the ATX workflow without an emulator or ROM. Use distinct names: both `rainbow.cas` and `rainbow.atr` would otherwise want to write `rainbow.car`.
 

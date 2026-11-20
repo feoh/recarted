@@ -11,7 +11,9 @@ dependencies = ["cyclopts>=4,<5"]
 classifiers = ["Environment :: Console", "Operating System :: POSIX :: Linux", "Topic :: System :: Emulators"]
 
 [project.urls]
+Homepage = "https://github.com/feoh/recarted"
 Repository = "https://github.com/feoh/recarted"
+Issues = "https://github.com/feoh/recarted/issues"
 
 [project.scripts]
 recarted = "recarted.cli:main"
