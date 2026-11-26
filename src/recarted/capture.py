@@ -1,4 +1,4 @@
-"""Let a known disk's own loader run in Atari800. Never execute unknown ATX images."""
+"""Let a known disk's own loader run in Atari800. Never execute unknown disk images."""
 
 import os
 import shutil
@@ -7,6 +7,7 @@ import tempfile
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
+from struct import pack
 
 LOAD = 0x0400
 END = 0xC000
@@ -23,6 +24,9 @@ class Capture:
     # Sectors the program still reads after the hand-off, served read-only
     # from clean tracks of the original image.
     sectors: tuple[int, int] | None = None
+    # ATX: digest of the whole file. ATR: digest of the sector payload, as
+    # for every other ATR recipe; a plain header is rebuilt to boot it.
+    medium: str = "ATX"
 
 
 CAPTURES = (
@@ -60,6 +64,17 @@ CAPTURES = (
         end=0x4800,
         sectors=(109, 712),
     ),
+    # Broderbund: the same protection sequence as Whistler's Brother, then
+    # sectors 3-90 and 109-274 decrypted with a key the protection computes
+    # in zero page, 275-392 plain, all into $0600-$BFFF. It hands off at
+    # $3010 and never reads the disk again.
+    Capture(
+        "Drol",
+        "98b58846d3277f89a26969023702c5f4190882dde2c3a7b60c74354987783662",
+        0x3010,
+        "f21328a1b87f528b03faee23bb3323a11086068f957097bc184d1ed71676d584",
+        medium="ATR",
+    ),
 )
 OS_REV2 = "a77050b2d81db2d11eaa3dbafd8ec2531b478abcc3bcc4b0d846b634e885edb1"
 
@@ -72,10 +87,10 @@ def find(disk: bytes) -> Capture | None:
 def capture_program(disk: bytes, os_rom: Path | None) -> tuple[bytes, int]:
     spec = find(disk)
     if spec is None:
-        raise ValueError("No verified emulator hand-off for this ATX revision.")
+        raise ValueError("No verified emulator hand-off for this disk revision.")
     if os_rom is None or not os_rom.is_file():
         raise ValueError(
-            "This ATX needs Atari800 and --os-rom pointing to your stock Atari XL/XE OS revision 2 ROM."
+            f"This {spec.medium} needs Atari800 and --os-rom pointing to your stock Atari XL/XE OS revision 2 ROM."
         )
     with os_rom.open("rb") as stream:
         rom = stream.read(16385)
@@ -86,11 +101,17 @@ def capture_program(disk: bytes, os_rom: Path | None) -> tuple[bytes, int]:
     emulator = shutil.which("atari800")
     if not emulator:
         raise ValueError(
-            "Install Atari800 (with the text monitor) to convert this ATX."
+            f"Install Atari800 (with the text monitor) to convert this {spec.medium}."
+        )
+    media = "disk." + spec.medium.lower()
+    if spec.medium == "ATR":
+        paragraphs = len(disk) // 16
+        disk = (
+            pack("<HHHH8x", 0x0296, paragraphs & 0xFFFF, 128, paragraphs >> 16) + disk
         )
     with tempfile.TemporaryDirectory(prefix="recarted-") as tmp:
         root = Path(tmp)
-        source = root / "disk.atx"
+        source = root / media
         source.write_bytes(disk)
         source.chmod(0o444)
         (root / "xl.rom").write_bytes(rom)
@@ -110,7 +131,7 @@ def capture_program(disk: bytes, os_rom: Path | None) -> tuple[bytes, int]:
             "-no-video-accel",
             "-nosound",
             "-turbo",
-            "disk.atx",
+            media,
         ]
         # Every monitor command and filename is ours, not derived from a user path.
         commands = (
@@ -138,7 +159,7 @@ def capture_program(disk: bytes, os_rom: Path | None) -> tuple[bytes, int]:
                 transcript = log.read(65536).lower()
         except subprocess.TimeoutExpired as exc:
             raise ValueError(
-                "Timed out waiting for the ATX loader. Use an Atari800 build with the text monitor (tested: 5.2.0)."
+                "Timed out waiting for the disk's loader. Use an Atari800 build with the text monitor (tested: 5.2.0)."
             ) from exc
         dump = root / "game.bin"
         if (
@@ -148,13 +169,13 @@ def capture_program(disk: bytes, os_rom: Path | None) -> tuple[bytes, int]:
             or dump.stat().st_size != END - LOAD
         ):
             raise ValueError(
-                "Atari800 did not reach the verified ATX hand-off. Check that it has the text monitor (tested: 5.2.0)."
+                "Atari800 did not reach the verified hand-off. Check that it has the text monitor (tested: 5.2.0)."
             )
         body = dump.read_bytes()
     i = spec.entry - LOAD
     if sha256(body[i : i + 128]).hexdigest() != spec.code_sha256:
         raise ValueError(
-            "Unexpected program at the ATX hand-off; refusing to build a cartridge."
+            "Unexpected program at the hand-off; refusing to build a cartridge."
         )
     # Below the OS's own text screen, RAM past a trimmed capture must be empty.
     if any(body[spec.end - LOAD : OS_SCREEN - LOAD]):

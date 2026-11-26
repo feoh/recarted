@@ -241,3 +241,38 @@ def test_capture_with_sector_window(monkeypatch):
     assert car[0x1F00:0x1F09] == pack("<BBHBHH", 4, 0x44, 0x0800, 4, 19, 36)
     assert car[8192 : 8192 + len(ram)] == ram
     assert car[4 * 8192 : 4 * 8192 + 36 * 128] == atx.sd_sector_window(disk, 19, 54)
+
+
+def test_atr_capture_boots_rebuilt_image(monkeypatch, synthetic_capture):
+    _, rom, body, entry = synthetic_capture
+    atr = example_image("atr")
+    payload = atr[16:]
+    spec = capture.Capture(
+        "synthetic",
+        sha256(payload).hexdigest(),
+        entry,
+        sha256(body[:128]).hexdigest(),
+        medium="ATR",
+    )
+    monkeypatch.setattr(capture, "CAPTURES", (spec,))
+    recipe = images.Recipe("synthetic", "ATR", "capture", spec.disk_sha256)
+    monkeypatch.setattr(images, "RECIPES", (recipe,))
+    booted = []
+
+    def monitor(cmd, *, cwd, env, input, stdout, stderr, timeout, check):
+        media = Path(cwd) / "disk.atr"
+        assert cmd[-1] == "disk.atr" and not (Path(cwd) / "disk.atx").exists()
+        booted.append(media.read_bytes())
+        stdout.write(b"(breakpoint at 1400)\n")
+        (Path(cwd) / "game.bin").write_bytes(body)
+        return subprocess.CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(subprocess, "run", monitor)
+    image = identify(atr)
+    assert image.recipe == recipe and image.payload == payload
+    car = convert_image(image, os_rom=rom)[16:]
+    assert car[8192 : 8192 + len(body)] == body
+    # A plain header around the recognized sectors, recognized again on its own.
+    assert booted[0][16:] == payload and identify(booted[0]).recipe == recipe
+    with pytest.raises(ValueError, match="ATR needs Atari800"):
+        capture.capture_program(payload, None)

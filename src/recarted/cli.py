@@ -54,7 +54,7 @@ def convert(
     os_rom: Path | None = None,
     rom_type: int | None = None,
 ) -> None:
-    """Convert to a new cartridge. Some ATX recipes need a stock XL/XE OS via --os-rom.
+    """Convert to a new cartridge. Some disk recipes need a stock XL/XE OS via --os-rom.
 
     Parameters
     ----------

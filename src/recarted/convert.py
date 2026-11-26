@@ -111,7 +111,9 @@ def convert_image(
     else:
         if recipe.loader in ("capture", "capture-disk"):
             if kind != "car":
-                raise ValueError("This ATX recipe produces a .car, not an .xex.")
+                raise ValueError(
+                    "This emulator-assisted recipe produces a .car, not an .xex."
+                )
             spec = find(payload)
             window = spec.sectors if spec else None
             # Check the clean tracks before spending time in the emulator.

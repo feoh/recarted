@@ -24,7 +24,7 @@ RECIPES = (
     *(
         Recipe(
             spec.title,
-            "ATX",
+            spec.medium,
             "capture-disk" if spec.sectors else "capture",
             spec.disk_sha256,
         )
