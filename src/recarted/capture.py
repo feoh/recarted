@@ -30,6 +30,15 @@ CAPTURES = (
         0x0418,
         "d46fba5c0e3fc344d1ef63c5708c61634367c2ffea80254757660780146a508b",
     ),
+    # Datasoft: the boot loader XORs its sector list (sector 17, which has two
+    # physical copies on track 0) with sector 16, reads that list, then hands
+    # off at $0680. The captured RAM has no other DSKINV call.
+    Capture(
+        "O'Riley's Mine",
+        "f8e2c9cbfd5fa73ed911ce10ec0804778da72382460731e3fa958666e5d404e8",
+        0x0680,
+        "4ce9c722ec016c1c4d1225db8a6b47c9ad8cf27f2e43362df61e31d89426466e",
+    ),
 )
 OS_REV2 = "a77050b2d81db2d11eaa3dbafd8ec2531b478abcc3bcc4b0d846b634e885edb1"
 LOAD = 0x0400
