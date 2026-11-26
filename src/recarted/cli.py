@@ -26,7 +26,7 @@ def inspect(source: Path) -> None:
     print(f"{source.name}: {image.medium}. {image.detail}")
     if image.recipe:
         print(f"Matched: {image.recipe.name}. Output: A8PicoCart type 41 (128 KiB).")
-        if image.recipe.loader == "capture":
+        if image.recipe.loader in ("capture", "capture-disk"):
             print("Conversion needs Atari800 and --os-rom (stock XL/XE OS revision 2).")
     elif image.medium in ("ATR", "CAS", "ATX"):
         print("No matching recipe; this revision cannot be converted yet.")
@@ -39,6 +39,7 @@ def recipes() -> None:
         formats = {
             "disk": "CAR (read-only virtual disk)",
             "capture": "CAR (Atari800 + XL/XE OS rev. 2 required)",
+            "capture-disk": "CAR with a read-only virtual disk (Atari800 + XL/XE OS rev. 2 required)",
         }.get(recipe.loader, "CAR or XEX")
         print(f"{recipe.medium}  {recipe.name}: {formats}")
     for title, mapper in sorted(KNOWN_ROMS.values()):
@@ -67,7 +68,7 @@ def convert(
     )
     save_new(out, artifact)
     print(f"Created {out} ({len(artifact):,} bytes).")
-    if image.recipe and image.recipe.loader == "disk":
+    if image.recipe and image.recipe.loader in ("disk", "capture-disk"):
         print(
             "The virtual disk is read-only; use a writable disk setup to save changes."
         )

@@ -98,6 +98,34 @@ def description(records: list[Track]) -> str:
     return f"ATX v1: {len(records)} tracks, {total} sector records, {duplicates} duplicate IDs, {errors} flagged records."
 
 
+def sd_sector_window(data: bytes, first: int, last: int) -> bytes:
+    """Sectors first..last of an allowlisted disk, from complete clean tracks only.
+
+    Tracks outside the window (such as a protected boot track) are not read.
+    """
+    wanted = range((first - 1) // 18, (last - 1) // 18 + 1)
+    sectors: dict[int, memoryview] = {}
+    for track in tracks(data):
+        if track.number not in wanted:
+            continue
+        if track.flags or track.extensions or len(track.headers) != 18:
+            raise ValueError("Unexpected ATX geometry for this recipe.")
+        for sector, status, offset in track.headers:
+            key = track.number * 18 + sector
+            if (
+                status
+                or not 1 <= sector <= 18
+                or key in sectors
+                or not offset
+                or offset + 128 > track.data_end
+            ):
+                raise ValueError("Cannot map this ATX sector losslessly.")
+            sectors[key] = track.block[offset : offset + 128]
+    if len(sectors) != len(wanted) * 18:
+        raise ValueError("Incomplete ATX disk.")
+    return b"".join(sectors[i] for i in range(first, last + 1))
+
+
 def linear_sd_disk(data: bytes, track_count: int) -> bytes:
     """Used only on allowlisted complete 18-sector single-density tracks."""
     sectors: dict[int, memoryview] = {}

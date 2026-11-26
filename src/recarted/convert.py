@@ -4,7 +4,8 @@ from importlib.resources import files
 from pathlib import Path
 from struct import pack
 
-from .capture import LOAD, capture_program
+from . import atx
+from .capture import LOAD, capture_program, find
 from .images import STANDARD_ROM_SIZES, Image
 
 
@@ -29,6 +30,36 @@ def segment(addr: int, data: bytes) -> bytes:
 
 def _car(mapper: int, payload: bytes | bytearray) -> bytes:
     return pack(">4sIII", b"CART", mapper, sum(payload) & 0xFFFFFFFF, 0) + payload
+
+
+def _type41(loader: str, params: bytes, *banks: tuple[int, bytes]) -> bytes:
+    """Bank 0: ReCarted boot code, params at $BF00 and vectors; data from bank N."""
+    boot = files("recarted").joinpath("loaders", loader + ".bin").read_bytes()
+    if len(boot) > 0x1F00 or any(
+        bank < 1 or bank * 8192 + len(data) > 131072 for bank, data in banks
+    ):
+        raise ValueError("Loader or payload does not fit a type-41 cartridge.")
+    rom = bytearray([0xFF]) * 131072
+    rom[: len(boot)] = boot
+    rom[0x1F00 : 0x1F00 + len(params)] = params
+    rom[0x1FF9:8192] = bytes.fromhex("60 00 a0 00 04 f9 bf")
+    for bank, data in banks:
+        rom[bank * 8192 : bank * 8192 + len(data)] = data
+    return _car(41, rom)
+
+
+def hybrid_car(load: int, ram: bytes, entry: int, first: int, sectors: bytes) -> bytes:
+    """Captured RAM from bank 1, then a read-only window of 128-byte sectors."""
+    pages = (len(ram) + 255) // 256
+    if load & 255 or not 1 <= pages <= 255 or load + pages * 256 > 0xC000:
+        raise ValueError("Program is outside supported Atari RAM.")
+    if not sectors or len(sectors) % 128:
+        raise ValueError("Incomplete sector window.")
+    disk_bank = 1 + (pages + 31) // 32
+    params = pack(
+        "<BBHBHH", load >> 8, pages, entry, disk_bank, first, len(sectors) // 128
+    )
+    return _type41("hybrid", params, (1, ram), (disk_bank, sectors))
 
 
 def convert_image(
@@ -78,10 +109,16 @@ def convert_image(
         loader = "disk"
         params = payload[2:4] + payload[1:2]
     else:
-        if recipe.loader == "capture":
+        if recipe.loader in ("capture", "capture-disk"):
             if kind != "car":
                 raise ValueError("This ATX recipe produces a .car, not an .xex.")
+            spec = find(payload)
+            window = spec.sectors if spec else None
+            # Check the clean tracks before spending time in the emulator.
+            sectors = atx.sd_sector_window(payload, *window) if window else b""
             payload, run = capture_program(payload, os_rom)
+            if window:
+                return hybrid_car(LOAD, payload, run, window[0], sectors)
             load, casini = LOAD, 0
         elif recipe.loader == "bruce":
             # The first sector is the disk reader; the next $7400 bytes are
@@ -105,12 +142,4 @@ def convert_image(
             )
         payload = bytes(load & 255) + payload
         params = pack("<BBHH", load >> 8, (len(payload) + 255) // 256, run, casini)
-    boot = files("recarted").joinpath("loaders", loader + ".bin").read_bytes()
-    if len(boot) > 0x1F00 or len(payload) > 15 * 8192:
-        raise ValueError("Loader or payload does not fit a type-41 cartridge.")
-    rom = bytearray([0xFF]) * 131072
-    rom[: len(boot)] = boot
-    rom[0x1F00 : 0x1F00 + len(params)] = params
-    rom[0x1FF9:8192] = bytes.fromhex("60 00 a0 00 04 f9 bf")
-    rom[8192 : 8192 + len(payload)] = payload
-    return _car(41, rom)
+    return _type41(loader, params, (1, payload))

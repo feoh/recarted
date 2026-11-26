@@ -21,7 +21,15 @@ class Recipe:
 
 
 RECIPES = (
-    *(Recipe(spec.title, "ATX", "capture", spec.disk_sha256) for spec in CAPTURES),
+    *(
+        Recipe(
+            spec.title,
+            "ATX",
+            "capture-disk" if spec.sectors else "capture",
+            spec.disk_sha256,
+        )
+        for spec in CAPTURES
+    ),
     Recipe(
         "Jumpman",
         "ATX",

@@ -8,6 +8,10 @@ from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
 
+LOAD = 0x0400
+END = 0xC000
+OS_SCREEN = 0xBC00  # graphics 0 screen and display list below RAMTOP $C0
+
 
 @dataclass(frozen=True)
 class Capture:
@@ -15,6 +19,10 @@ class Capture:
     disk_sha256: str
     entry: int
     code_sha256: str  # 128 bytes of loaded code at the hand-off
+    end: int = END  # RAM from here to END was all zero at the hand-off
+    # Sectors the program still reads after the hand-off, served read-only
+    # from clean tracks of the original image.
+    sectors: tuple[int, int] | None = None
 
 
 CAPTURES = (
@@ -39,15 +47,30 @@ CAPTURES = (
         0x0680,
         "4ce9c722ec016c1c4d1225db8a6b47c9ad8cf27f2e43362df61e31d89426466e",
     ),
+    # Broderbund: sector 1 loads an obfuscated chain from track 5 (IDs 2-9
+    # each have two physical copies), checks track 39, loads the game and
+    # hands off at $0800. The game then loads title data (sectors 109-176)
+    # and 36-sector levels (173-712) itself through DSKINV, and writes high
+    # scores to sector 676. Nothing above $4700 but the OS screen was set.
+    Capture(
+        "Whistler's Brother",
+        "f5a22b57ca193615abbdc0a898a061e2fc293a8978d4301dab92d08bce407549",
+        0x0800,
+        "83be1d3b6356a17a3cf9cf540fa9e047acbb26a5793fa8855c955b88763de48d",
+        end=0x4800,
+        sectors=(109, 712),
+    ),
 )
 OS_REV2 = "a77050b2d81db2d11eaa3dbafd8ec2531b478abcc3bcc4b0d846b634e885edb1"
-LOAD = 0x0400
-END = 0xC000
+
+
+def find(disk: bytes) -> Capture | None:
+    digest = sha256(disk).hexdigest()
+    return next((s for s in CAPTURES if s.disk_sha256 == digest), None)
 
 
 def capture_program(disk: bytes, os_rom: Path | None) -> tuple[bytes, int]:
-    digest = sha256(disk).hexdigest()
-    spec = next((s for s in CAPTURES if s.disk_sha256 == digest), None)
+    spec = find(disk)
     if spec is None:
         raise ValueError("No verified emulator hand-off for this ATX revision.")
     if os_rom is None or not os_rom.is_file():
@@ -133,4 +156,9 @@ def capture_program(disk: bytes, os_rom: Path | None) -> tuple[bytes, int]:
         raise ValueError(
             "Unexpected program at the ATX hand-off; refusing to build a cartridge."
         )
-    return body, spec.entry
+    # Below the OS's own text screen, RAM past a trimmed capture must be empty.
+    if any(body[spec.end - LOAD : OS_SCREEN - LOAD]):
+        raise ValueError(
+            "Unexpected data above the captured program; refusing to build a cartridge."
+        )
+    return body[: spec.end - LOAD], spec.entry

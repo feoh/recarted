@@ -16,7 +16,7 @@ recarted convert rainbow.cas
 recarted inspect rainbow.car
 ```
 
-To update later, run `uv tool upgrade recarted`. If the shell can't find `recarted`, run `uv tool update-shell` and open a new terminal. Python 3.11 or newer is required; uv can supply it. No assembler is needed. Only the three emulator-assisted ATX recipes require Atari800 and an Atari OS ROM.
+To update later, run `uv tool upgrade recarted`. If the shell can't find `recarted`, run `uv tool update-shell` and open a new terminal. Python 3.11 or newer is required; uv can supply it. No assembler is needed. Only the four emulator-assisted ATX recipes require Atari800 and an Atari OS ROM.
 
 The example is an original Atari program that displays colour bars. Try `recarted example rainbow-disk.atr` for the floppy equivalent, or `recarted example rainbow-track.atx` to try the ATX workflow without an emulator or ROM. Use distinct names: both `rainbow.cas` and `rainbow.atr` would otherwise want to write `rainbow.car`.
 
@@ -38,6 +38,7 @@ recarted convert 'Bruce Lee.atr' --output 'Bruce Lee.xex'
 | Disk (`.atr`) | Jumpman (Epyx, US), Pinball Construction Set | CAR with a **read-only** virtual disk |
 | Track disk (`.atx`) | Jumpman (Epyx, US) | CAR with a **read-only** virtual disk |
 | Track disk (`.atx`) | The Tail of Beta Lyrae (Datamost), Bruce Lee, O'Riley's Mine (Datasoft) | CAR; Atari800 + stock XL/XE OS revision 2 required |
+| Track disk (`.atx`) | Whistler's Brother (Broderbund) | CAR with a **read-only** virtual disk; Atari800 + stock XL/XE OS revision 2 required |
 
 These are **specific releases**, not every dump of each title. If `inspect` says “No matching recipe,” changing the name won't help. No commercial games, game data, or Atari OS ROMs are distributed with ReCarted. Use images you have the right to convert.
 
@@ -56,14 +57,14 @@ A CAR header doesn't fix OS compatibility. The recognized Kangaroo dump reached 
 
 ## Convert an ATX disk
 
-Run `recarted inspect` first. If the disk is the recognized Jumpman release, `recarted convert 'Jumpman (1983)(Epyx)(US)[!].atx'` works directly. For *The Tail of Beta Lyrae*, *Bruce Lee* and *O'Riley's Mine*, install Atari800 with its text monitor (tested with 5.2.0) and supply your own stock 16 KiB XL/XE OS revision 2 ROM. For example, from the directory containing the game and `ATARIXL.ROM`:
+Run `recarted inspect` first. If the disk is the recognized Jumpman release, `recarted convert 'Jumpman (1983)(Epyx)(US)[!].atx'` works directly. For *The Tail of Beta Lyrae*, *Bruce Lee*, *O'Riley's Mine* and *Whistler's Brother*, install Atari800 with its text monitor (tested with 5.2.0) and supply your own stock 16 KiB XL/XE OS revision 2 ROM. For example, from the directory containing the game and `ATARIXL.ROM`:
 
 ```sh
 recarted inspect 'Tail of Beta Lyrae (The) _ Datamost.atx'
 recarted convert 'Tail of Beta Lyrae (The) _ Datamost.atx' --os-rom ATARIXL.ROM
 ```
 
-ReCarted boots a temporary copy of the original track image in the background. The resulting `.car` needs neither the disk nor that ROM file on the cartridge. An unknown dump isn't flattened into an ATR; it may need the disk's duplicate sectors, timing or error status. If you're upgrading the Git-based install, run `uv tool upgrade recarted`.
+ReCarted boots a temporary copy of the original track image in the background. The resulting `.car` needs neither the disk nor that ROM file on the cartridge. *Whistler's Brother* keeps loading levels after it starts, so its cartridge also carries those disk sectors, read-only. New high scores aren't saved. An unknown dump isn't flattened into an ATR; it may need the disk's duplicate sectors, timing or error status. If you're upgrading the Git-based install, run `uv tool upgrade recarted`.
 
 ## Play it
 

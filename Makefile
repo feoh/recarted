@@ -1,4 +1,4 @@
-LOADERS := src/recarted/loaders/memory.bin src/recarted/loaders/disk.bin
+LOADERS := src/recarted/loaders/memory.bin src/recarted/loaders/disk.bin src/recarted/loaders/hybrid.bin
 .PHONY: loaders
 loaders: $(LOADERS)
 
